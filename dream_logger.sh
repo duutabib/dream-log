@@ -3,6 +3,9 @@
 # Notion API Manager
 # A Bash utility to manage Notion updates via the Notion API
 
+# Add to exit on command failure
+set -e
+
 #  Check and load environment variables from .env 
 if [[ -f .env ]]; then
     source .env
@@ -70,11 +73,11 @@ query_database() {
 
 # Function to add a page
 add_page() {
-    local Name="$1"
-    local Msg="$2"
+    local page_title="$1"
+    local msg="$2"
 
     # Validate inputs
-    if [[ -z "$Name" || -z "$Msg" ]]; then
+    if [[ -z "$name" || -z "$msg" ]]; then
         echo "Error: Name and Message are required for adding a page."
         usage
     fi
@@ -82,43 +85,80 @@ add_page() {
     # Construct JSON payload
     local data=$(jq -n \
         --arg parent_id "$DATABASE_ID" \
-        --arg Name "$Name" \
-        --arg Msg "$Msg" \
+        --arg page_title "$page_title" \
+        --arg msg "$msg" \
         '{
             "parent": { database_id: $parent_id },
             "properties": {
-                "Name": { "title": [{ "text": { "content": $Name } }] },
-                "Description": { "rich_text": [  { "text": { "content": $Msg } } ] }
+                "Name": {
+                    "title": [
+                        {
+                            "text": {
+                                "content": $page_title 
+                            } 
+                        } 
+                    ] 
+                },
+                "Description": {
+                    "rich_text": [  { 
+                        "text": {
+                            "content": $msg 
+                        } 
+                    } ] 
+                }
             }
         }')
 
-    echo "Adding page with title '$Name' and status '$status'..."
+    echo "Adding page with title '$page_title' and message '$msg'..."
     response=$(make_api_request "POST" "/pages" "$data")
     echo "Page added successfully: $(echo "$response" | jq -r '.id')"
 }
 
 # Function to update a page
 update_page() {
-    local page_id="$1"
-    local status="$2"
+    local page_title="$1"
+    local msg="$2"
+    local status="$3"
 
     # Validate inputs
-    if [[ -z "$page_id" || -z "$status" ]]; then
-        echo "Error: Page ID and status are required for updating a page."
+    if [[ -z "$page_title" || -z "$msg" || -z "$status" ]]; then
+        echo "Error: Page title, message and status are required for updating a page."
         usage
     fi
 
     # Construct JSON payload
     local data=$(jq -n \
         --arg status "$status" \
+        --arg msg "$msg" \
         '{
-            properties: {
-                Status: { select: { name: $status } }
+            "properties": {
+                "Name": { 
+                    "title": [
+                        {
+                            "text": { 
+                                "content": $page_title
+                            } 
+                        } 
+                    ] 
+                },
+                "Description": { 
+                    "rich_text": [  { 
+                        "text": { 
+                            "content": $msg 
+                        } 
+                    } ] 
+                },
+                "Status": { 
+                    "select": { 
+                        "name": $status 
+                    } 
+                }
             }
-        }')
+        }'
+    )
 
-    echo "Updating page '$page_id' with status '$status'..."
-    response=$(make_api_request "PATCH" "/pages/$page_id" "$data")
+    echo "Updating page '$page_title' with status '$status'..."
+    response=$(make_api_request "PATCH" "/pages/$page_title" "$data")
     echo "Page updated successfully: $(echo "$response" | jq -r '.id')"
 }
 
@@ -131,7 +171,7 @@ case "$1" in
         add_page "$2" "$3"
         ;;
     update)
-        update_page "$2" "$3"
+        update_page "$2" "$3" 
         ;;
     *)
         usage
