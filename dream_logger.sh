@@ -39,6 +39,74 @@ usage() {
     exit 1
 }
 
+# build payload function
+_build_page_payload() {
+    local page_title="$1"
+    local msg="$2"
+    local status="${3:-}"
+    local parent_id="${4:-$DATABASE_ID}"
+    
+    if [[ -n "parent_id"]];
+    # for new pages (add_page) 
+    then
+        jq -n \
+            --arg parent_id "$parent_id" \
+            --arg page_title "$page_title" \
+            --arg msg "$msg" \
+        '{
+            "parent": { database_id: $parent_id },
+            "properties": {
+                "Name": {
+                    "title": [
+                        {
+                            "text": {
+                                "content": $page_title 
+                            } 
+                        } 
+                    ] 
+                },
+                "Description": {
+                    "rich_text": [  { 
+                        "text": {
+                            "content": $msg 
+                        } 
+                    } ] 
+                }
+            }
+        }'
+    else 
+        # For updates (update_page)
+        jq -n \
+        --arg page_title "$page_title" \
+        --arg msg "$msg" \
+        --arg status "$status" \
+        '{
+            "properties": {
+                "Name": { 
+                    "title": [
+                        {
+                            "text": { 
+                                "content": $page_title
+                            } 
+                        } 
+                    ] 
+                },
+                "Description": { 
+                    "rich_text": [  { 
+                        "text": { 
+                            "content": $msg 
+                        } 
+                    } ] 
+                },
+                "Status": { 
+                    "select": { 
+                        "name": $status 
+                    } 
+                }
+            }
+        }'
+    fi
+}
 # Function to make API requests
 make_api_request() {
     # declare local vars 
@@ -67,7 +135,8 @@ make_api_request() {
 # Function to query the database
 query_database() {
     echo "Querying database..."
-    response=$(make_api_request "POST" "/databases/$DATABASE_ID/query" "{}")
+    data=$(_build_page_payload "$page_title" "$msg" "$status" "$DATABASE_ID")
+    response=$(make_api_request "POST" "/databases/$DATABASE_ID/query" "$data")
     echo "$response" | jq '.results[] | {id: .id, title: .properties.Name.title[0].text.content, status: .properties.Status.select.name}'
 }
 
@@ -77,39 +146,13 @@ add_page() {
     local msg="$2"
 
     # Validate inputs
-    if [[ -z "$name" || -z "$msg" ]]; then
-        echo "Error: Name and Message are required for adding a page."
+    if [[ -z "$page_title" || -z "$msg" ]]; then
+        echo "Error: Page title and Message are required for adding a page."
         usage
     fi
 
-    # Construct JSON payload
-    local data=$(jq -n \
-        --arg parent_id "$DATABASE_ID" \
-        --arg page_title "$page_title" \
-        --arg msg "$msg" \
-        '{
-            "parent": { database_id: $parent_id },
-            "properties": {
-                "Name": {
-                    "title": [
-                        {
-                            "text": {
-                                "content": $page_title 
-                            } 
-                        } 
-                    ] 
-                },
-                "Description": {
-                    "rich_text": [  { 
-                        "text": {
-                            "content": $msg 
-                        } 
-                    } ] 
-                }
-            }
-        }')
-
     echo "Adding page with title '$page_title' and message '$msg'..."
+    data=$(_build_page_payload "$page_title" "$msg" "$status" 
     response=$(make_api_request "POST" "/pages" "$data")
     echo "Page added successfully: $(echo "$response" | jq -r '.id')"
 }
@@ -126,38 +169,9 @@ update_page() {
         usage
     fi
 
-    # Construct JSON payload
-    local data=$(jq -n \
-        --arg status "$status" \
-        --arg msg "$msg" \
-        '{
-            "properties": {
-                "Name": { 
-                    "title": [
-                        {
-                            "text": { 
-                                "content": $page_title
-                            } 
-                        } 
-                    ] 
-                },
-                "Description": { 
-                    "rich_text": [  { 
-                        "text": { 
-                            "content": $msg 
-                        } 
-                    } ] 
-                },
-                "Status": { 
-                    "select": { 
-                        "name": $status 
-                    } 
-                }
-            }
-        }'
-    )
 
-    echo "Updating page '$page_title' with status '$status'..."
+    echo "Updating page '$page_title' with $msg and status '$status'..."
+    data=$(_build_page_payload "$page_title" "$msg" "$status" "")
     response=$(make_api_request "PATCH" "/pages/$page_title" "$data")
     echo "Page updated successfully: $(echo "$response" | jq -r '.id')"
 }
@@ -165,7 +179,7 @@ update_page() {
 # Main logic
 case "$1" in
     query)
-        query_database
+        query_database "$2" "$3" "$4"
         ;;
     log)
         add_page "$2" "$3"
