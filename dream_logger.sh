@@ -46,9 +46,8 @@ _build_page_payload() {
     local status="${3:-}"
     local parent_id="${4:-$DATABASE_ID}"
     
-    if [[ -n "parent_id"]];
-    # for new pages (add_page) 
-    then
+    if [[ -n "$parent_id" ]]; then
+        # for new pages (add_page) 
         jq -n \
             --arg parent_id "$parent_id" \
             --arg page_title "$page_title" \
@@ -152,7 +151,8 @@ add_page() {
     fi
 
     echo "Adding page with title '$page_title' and message '$msg'..."
-    data=$(_build_page_payload "$page_title" "$msg" "$status" 
+    local status=""  # Init status var...
+    data=$(_build_page_payload "$page_title" "$msg" "$status") 
     response=$(make_api_request "POST" "/pages" "$data")
     echo "Page added successfully: $(echo "$response" | jq -r '.id')"
 }
