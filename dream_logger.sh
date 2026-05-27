@@ -6,7 +6,7 @@
 # Add to exit on command failure
 set -e
 
-#  Check and load environment variables from .env 
+#  Check and load environment variables from .env
 if [[ -f .env ]]; then
     source .env
 else
@@ -30,12 +30,12 @@ usage() {
     echo "Usage: $0 {query|log|update} [arguments]"
     echo "Commands:"
     echo "  query                Query the database and list entries"
-    echo "  log <title> <status> Add a new page to the database"
-    echo "  update <page_id> <status> Update the status of a page"
+    echo "  log <title> <msg>              Add a new page to the database"
+    echo "  update <page_id> <msg> <status>  Update a page"
     echo "Example:"
     echo "  $0 query"
-    echo "  $0 log 'New Task' 'To Do'"
-    echo "  $0 update 'page_id' 'Done'"
+    echo "  $0 log 'Flying' 'I was flying over mountains'"
+    echo "  $0 update 'abc123' 'Updated notes' 'Done'"
     exit 1
 }
 
@@ -44,10 +44,10 @@ _build_page_payload() {
     local page_title="$1"
     local msg="$2"
     local status="${3:-}"
-    local parent_id="${4:-$DATABASE_ID}"
-    
+    local parent_id="${4-$DATABASE_ID}"
+
     if [[ -n "$parent_id" ]]; then
-        # for new pages (add_page) 
+        # for new pages (add_page)
         jq -n \
             --arg parent_id "$parent_id" \
             --arg page_title "$page_title" \
@@ -59,21 +59,21 @@ _build_page_payload() {
                     "title": [
                         {
                             "text": {
-                                "content": $page_title 
-                            } 
-                        } 
-                    ] 
+                                "content": $page_title
+                            }
+                        }
+                    ]
                 },
                 "Description": {
-                    "rich_text": [  { 
+                    "rich_text": [  {
                         "text": {
-                            "content": $msg 
-                        } 
-                    } ] 
+                            "content": $msg
+                        }
+                    } ]
                 }
             }
         }'
-    else 
+    else
         # For updates (update_page)
         jq -n \
         --arg page_title "$page_title" \
@@ -81,26 +81,26 @@ _build_page_payload() {
         --arg status "$status" \
         '{
             "properties": {
-                "Name": { 
+                "Name": {
                     "title": [
                         {
-                            "text": { 
+                            "text": {
                                 "content": $page_title
-                            } 
-                        } 
-                    ] 
+                            }
+                        }
+                    ]
                 },
-                "Description": { 
-                    "rich_text": [  { 
-                        "text": { 
-                            "content": $msg 
-                        } 
-                    } ] 
+                "Description": {
+                    "rich_text": [  {
+                        "text": {
+                            "content": $msg
+                        }
+                    } ]
                 },
-                "Status": { 
-                    "select": { 
-                        "name": $status 
-                    } 
+                "Status": {
+                    "select": {
+                        "name": $status
+                    }
                 }
             }
         }'
@@ -108,13 +108,13 @@ _build_page_payload() {
 }
 # Function to make API requests
 make_api_request() {
-    # declare local vars 
+    # declare local vars
     local method="$1"
     local endpoint="$2"
     local data="$3"
     local response
 
-    # set response var to api request  
+    # set response var to api request
     response=$(curl -s -X "$method" "$API_URL$endpoint" \
         -H "Authorization: Bearer $NOTION_TOKEN" \
         -H "Notion-Version: $NOTION_VERSION" \
@@ -122,9 +122,11 @@ make_api_request() {
         --data "$data")
 
     # Check for API errors
-    if echo "$response" | jq -e '.object == "error"' >/dev/null; then
-        echo "Error: API request failed - $(echo "$response" | jq -r '.message')"
-        printf "$response"
+    local error_msg
+    error_msg=$(echo "$response" | jq -r 'if .object == "error" then .message else "" end')
+    if [[ -n "$error_msg" ]]; then
+        echo "Error: API request failed - $error_msg"
+        echo "$response"
         exit 1
     fi
 
@@ -134,7 +136,9 @@ make_api_request() {
 # Function to query the database
 query_database() {
     echo "Querying database..."
-    data=$(_build_page_payload "$page_title" "$msg" "$status" "$DATABASE_ID")
+    local data
+    local response
+    data='{}'
     response=$(make_api_request "POST" "/databases/$DATABASE_ID/query" "$data")
     echo "$response" | jq '.results[] | {id: .id, title: .properties.Name.title[0].text.content, status: .properties.Status.select.name}'
 }
@@ -151,41 +155,45 @@ add_page() {
     fi
 
     echo "Adding page with title '$page_title' and message '$msg'..."
-    local status=""  # Init status var...
-    data=$(_build_page_payload "$page_title" "$msg" "$status") 
+    local status=""
+    local data
+    local response
+    data=$(_build_page_payload "$page_title" "$msg" "$status")
     response=$(make_api_request "POST" "/pages" "$data")
     echo "Page added successfully: $(echo "$response" | jq -r '.id')"
 }
 
 # Function to update a page
 update_page() {
-    local page_title="$1"
+    local page_id="$1"
     local msg="$2"
     local status="$3"
 
     # Validate inputs
-    if [[ -z "$page_title" || -z "$msg" || -z "$status" ]]; then
-        echo "Error: Page title, message and status are required for updating a page."
+    if [[ -z "$page_id" || -z "$msg" || -z "$status" ]]; then
+        echo "Error: Page ID, message and status are required for updating a page."
         usage
     fi
 
-
-    echo "Updating page '$page_title' with $msg and status '$status'..."
-    data=$(_build_page_payload "$page_title" "$msg" "$status" "")
-    response=$(make_api_request "PATCH" "/pages/$page_title" "$data")
+    local data
+    local response
+    echo "Updating page '$page_id' with '$msg' and status '$status'..."
+    data=$(_build_page_payload "$page_id" "$msg" "$status" "")
+    response=$(make_api_request "PATCH" "/pages/$page_id" "$data")
     echo "Page updated successfully: $(echo "$response" | jq -r '.id')"
 }
 
 # Main logic
 case "$1" in
     query)
-        query_database "$2" "$3" "$4"
+        query_database
         ;;
     log)
         add_page "$2" "$3"
         ;;
     update)
-        update_page "$2" "$3" 
+        update_page "$2" "$3" "$4"
+
         ;;
     *)
         usage
