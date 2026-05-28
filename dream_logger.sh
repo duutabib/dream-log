@@ -27,17 +27,19 @@ fi
 
 # Function to display usage
 usage() {
-    echo "Usage: $0 {query|log|update|del|get-id} [arguments]"
+    echo "Usage: $0 {query|log|update|amend|del|get-id} [arguments]"
     echo "Commands:"
     echo "  query                            Query the database and list entries"
     echo "  log <title> <msg>                Add a new page to the database"
     echo "  update <page_id> <msg> <status>  Update a page"
+    echo "  amend <msg> <status>             Update the most recent log entry"
     echo "  del <page_id>                    Delete a page"
     echo "  get-id <title>                   Get the page ID for a given title"
     echo "Example:"
     echo "  $0 query"
     echo "  $0 log 'Flying' 'I was flying over mountains'"
     echo "  $0 update 'abc123' 'Updated notes' 'Done'"
+    echo "  $0 amend 'Updated notes' 'Done'"
     echo "  $0 get-id 'Flying'"
     echo "  $0 del 'abc123'"
     exit 1
@@ -137,6 +139,33 @@ query_database() {
     echo "$response" | jq '.results[] | {id: .id, title: .properties.Name.title[0].text.content, status: .properties.Status.select.name}'
 }
 
+# Function to amend the most recent log entry
+amend_recent() {
+    local msg="$1"
+    local status="$2"
+
+    if [[ -z "$msg" || -z "$status" ]]; then
+        echo "Error: Message and status are required."
+        usage
+    fi
+
+    local response page_id
+    response=$(make_api_request "POST" "/databases/$DATABASE_ID/query" \
+        '{"sorts": [{"timestamp": "created_time", "direction": "descending"}], "page_size": 1}')
+    page_id=$(echo "$response" | jq -r '.results[0].id')
+
+    if [[ -z "$page_id" || "$page_id" == "null" ]]; then
+        echo "Error: No entries found in the database."
+        exit 1
+    fi
+
+    echo "Amending most recent entry '$page_id'..."
+    local data
+    data=$(_build_page_payload "" "$msg" "$status" "")
+    make_api_request "PATCH" "/pages/$page_id" "$data" > /dev/null
+    echo "Entry updated successfully: $page_id"
+}
+
 # Function to get a page ID by title
 get_id() {
     local title="$1"
@@ -225,6 +254,9 @@ case "$1" in
         ;;
     update)
         update_page "$2" "$3" "$4"
+        ;;
+    amend)
+        amend_recent "$2" "$3"
         ;;
     del)
         delete_page "$2"
