@@ -76,20 +76,10 @@ _build_page_payload() {
     else
         # For updates (update_page)
         jq -n \
-        --arg page_title "$page_title" \
         --arg msg "$msg" \
         --arg status "$status" \
         '{
             "properties": {
-                "Name": {
-                    "title": [
-                        {
-                            "text": {
-                                "content": $page_title
-                            }
-                        }
-                    ]
-                },
                 "Description": {
                     "rich_text": [  {
                         "text": {
