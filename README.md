@@ -45,7 +45,7 @@ Usage: ./dream_logger.sh {query|log|update|delete} [arguments]
   query                            List all entries in the database
   log <title> <msg>                Add a new dream entry
   update <page_id> <msg> <status>  Update a dream's notes and status
-  delete <page_id>                 Delete (archive) a dream entry
+  del <page_id>                    Delete (archive) a dream entry
 ```
 
 ---
@@ -85,10 +85,10 @@ Page updated successfully: 36ec4fd1-da0d-813a-97c3-d550fce7d7e6
 
 > Valid status values: `New`, `Reviewed`, `Done`
 
-### Delete — remove an entry
+### Del — remove an entry
 
 ```bash
-$ ./dream_logger.sh delete '36ec4fd1-da0d-813a-97c3-d550fce7d7e6'
+$ ./dream_logger.sh del '36ec4fd1-da0d-813a-97c3-d550fce7d7e6'
 
 Deleting page '36ec4fd1-da0d-813a-97c3-d550fce7d7e6'...
 Page deleted successfully: 36ec4fd1-da0d-813a-97c3-d550fce7d7e6

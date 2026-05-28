@@ -27,17 +27,17 @@ fi
 
 # Function to display usage
 usage() {
-    echo "Usage: $0 {query|log|update|delete} [arguments]"
+    echo "Usage: $0 {query|log|update|del} [arguments]"
     echo "Commands:"
     echo "  query                            Query the database and list entries"
     echo "  log <title> <msg>                Add a new page to the database"
     echo "  update <page_id> <msg> <status>  Update a page"
-    echo "  delete <page_id>                 Delete a page"
+    echo "  del <page_id>                    Delete a page"
     echo "Example:"
     echo "  $0 query"
     echo "  $0 log 'Flying' 'I was flying over mountains'"
     echo "  $0 update 'abc123' 'Updated notes' 'Done'"
-    echo "  $0 delete 'abc123'"
+    echo "  $0 del 'abc123'"
     exit 1
 }
 
@@ -201,7 +201,7 @@ case "$1" in
     update)
         update_page "$2" "$3" "$4"
         ;;
-    delete)
+    del)
         delete_page "$2"
         ;;
     *)
