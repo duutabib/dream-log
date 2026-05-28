@@ -27,16 +27,18 @@ fi
 
 # Function to display usage
 usage() {
-    echo "Usage: $0 {query|log|update|del} [arguments]"
+    echo "Usage: $0 {query|log|update|del|get-id} [arguments]"
     echo "Commands:"
     echo "  query                            Query the database and list entries"
     echo "  log <title> <msg>                Add a new page to the database"
     echo "  update <page_id> <msg> <status>  Update a page"
     echo "  del <page_id>                    Delete a page"
+    echo "  get-id <title>                   Get the page ID for a given title"
     echo "Example:"
     echo "  $0 query"
     echo "  $0 log 'Flying' 'I was flying over mountains'"
     echo "  $0 update 'abc123' 'Updated notes' 'Done'"
+    echo "  $0 get-id 'Flying'"
     echo "  $0 del 'abc123'"
     exit 1
 }
@@ -135,6 +137,29 @@ query_database() {
     echo "$response" | jq '.results[] | {id: .id, title: .properties.Name.title[0].text.content, status: .properties.Status.select.name}'
 }
 
+# Function to get a page ID by title
+get_id() {
+    local title="$1"
+
+    if [[ -z "$title" ]]; then
+        echo "Error: Title is required."
+        usage
+    fi
+
+    local response
+    response=$(make_api_request "POST" "/databases/$DATABASE_ID/query" '{}')
+    local id
+    id=$(echo "$response" | jq -r --arg title "$title" \
+        '.results[] | select(.properties.Name.title[0].text.content == $title) | .id')
+
+    if [[ -z "$id" ]]; then
+        echo "No entry found with title: $title"
+        exit 1
+    fi
+
+    echo "$id"
+}
+
 # Function to add a page
 add_page() {
     local page_title="$1"
@@ -203,6 +228,9 @@ case "$1" in
         ;;
     del)
         delete_page "$2"
+        ;;
+    get-id)
+        get_id "$2"
         ;;
     *)
         usage

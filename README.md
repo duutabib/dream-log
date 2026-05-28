@@ -45,6 +45,7 @@ Usage: ./dream_logger.sh {query|log|update|delete} [arguments]
   query                            List all entries in the database
   log <title> <msg>                Add a new dream entry
   update <page_id> <msg> <status>  Update a dream's notes and status
+  get-id <title>                   Get the page ID for a given title
   del <page_id>                    Delete (archive) a dream entry
 ```
 
@@ -85,10 +86,29 @@ Page updated successfully: 36ec4fd1-da0d-813a-97c3-d550fce7d7e6
 
 > Valid status values: `New`, `Reviewed`, `Done`
 
+### Get-id — look up a page ID by title
+
+```bash
+$ ./dream_logger.sh get-id 'Flying over mountains'
+
+36ec4fd1-da0d-813a-97c3-d550fce7d7e6
+```
+
 ### Del — remove an entry
+
+Use `get-id` to find the ID first, then pass it to `del`:
 
 ```bash
 $ ./dream_logger.sh del '36ec4fd1-da0d-813a-97c3-d550fce7d7e6'
+
+Deleting page '36ec4fd1-da0d-813a-97c3-d550fce7d7e6'...
+Page deleted successfully: 36ec4fd1-da0d-813a-97c3-d550fce7d7e6
+```
+
+Or chain them in one command:
+
+```bash
+$ ./dream_logger.sh del $(./dream_logger.sh get-id 'Flying over mountains')
 
 Deleting page '36ec4fd1-da0d-813a-97c3-d550fce7d7e6'...
 Page deleted successfully: 36ec4fd1-da0d-813a-97c3-d550fce7d7e6
