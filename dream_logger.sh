@@ -27,15 +27,17 @@ fi
 
 # Function to display usage
 usage() {
-    echo "Usage: $0 {query|log|update} [arguments]"
+    echo "Usage: $0 {query|log|update|delete} [arguments]"
     echo "Commands:"
-    echo "  query                Query the database and list entries"
-    echo "  log <title> <msg>              Add a new page to the database"
+    echo "  query                            Query the database and list entries"
+    echo "  log <title> <msg>                Add a new page to the database"
     echo "  update <page_id> <msg> <status>  Update a page"
+    echo "  delete <page_id>                 Delete a page"
     echo "Example:"
     echo "  $0 query"
     echo "  $0 log 'Flying' 'I was flying over mountains'"
     echo "  $0 update 'abc123' 'Updated notes' 'Done'"
+    echo "  $0 delete 'abc123'"
     exit 1
 }
 
@@ -173,6 +175,21 @@ update_page() {
     echo "Page updated successfully: $(echo "$response" | jq -r '.id')"
 }
 
+# Function to delete (archive) a page
+delete_page() {
+    local page_id="$1"
+
+    if [[ -z "$page_id" ]]; then
+        echo "Error: Page ID is required for deleting a page."
+        usage
+    fi
+
+    echo "Deleting page '$page_id'..."
+    local response
+    response=$(make_api_request "PATCH" "/pages/$page_id" '{"archived": true}')
+    echo "Page deleted successfully: $(echo "$response" | jq -r '.id')"
+}
+
 # Main logic
 case "$1" in
     query)
@@ -183,7 +200,9 @@ case "$1" in
         ;;
     update)
         update_page "$2" "$3" "$4"
-
+        ;;
+    delete)
+        delete_page "$2"
         ;;
     *)
         usage
