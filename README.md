@@ -125,3 +125,30 @@ The script expects the following properties on your Notion database:
 | Name        | Title     |
 | Description | Rich text |
 | Status      | Select    |
+
+---
+
+## Documentation
+
+**Man page** — `man/man1/dream-log.1`. View it without installing:
+
+```bash
+man ./man/man1/dream-log.1
+```
+
+To install it for `man dream-log` anywhere, copy it onto your `MANPATH`, e.g.:
+
+```bash
+mkdir -p ~/.local/share/man/man1
+cp man/man1/dream-log.1 ~/.local/share/man/man1/
+```
+
+**tldr page** — `tldr/pages/common/dream-log.md`. Render it directly:
+
+```bash
+tldr -r tldr/pages/common/dream-log.md
+```
+
+(Client-specific: clients that read a local pages directory, such as
+tealdeer or the Node.js client, can pick it up by copying/symlinking it
+into their configured custom-pages path.)

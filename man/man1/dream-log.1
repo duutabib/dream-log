@@ -1,0 +1,116 @@
+.TH DREAM-LOG 1 "2026-08-12" "dream-log 1.0" "User Commands"
+.SH NAME
+dream-log \- log and manage dream entries in a Notion database
+.SH SYNOPSIS
+.B dream-log
+.I command
+.RI [ arguments ]
+.SH DESCRIPTION
+.B dream-log
+(the
+.B dream_logger.sh
+script) is a Bash utility that stores dream journal entries in a Notion
+database via the Notion API. Each entry has a title, a description, and a
+status.
+.SH COMMANDS
+.TP
+.B query
+List all entries in the database, printing each entry's id, title, and
+status.
+.TP
+.BR log " " \fItitle\fR " " \fImsg\fR
+Add a new dream entry with the given title and description.
+.TP
+.BR update " " \fIpage_id\fR " " \fImsg\fR " " \fIstatus\fR
+Update an existing entry's description and status.
+.I status
+must be one of
+.BR New ", " Reviewed ", or " Done .
+.TP
+.BR amend " " \fImsg\fR " " \fIstatus\fR
+Update the description and status of the most recently created entry,
+without needing its page id.
+.TP
+.BR get-id " " \fItitle\fR
+Print the page id for the entry matching
+.IR title .
+.TP
+.BR del " " \fIpage_id\fR
+Delete (archive) the entry with the given page id.
+.SH ENVIRONMENT
+.B dream-log
+reads its configuration from environment variables, falling back to a
+.I .env
+file (see
+.B FILES
+below) for any that are unset.
+.TP
+.B NOTION_TOKEN
+Notion integration token used to authenticate API requests.
+.TP
+.B DATABASE_ID
+The 32-character hex id of the target Notion database.
+.TP
+.B API_URL
+Base URL for the Notion API, e.g.
+.IR https://api.notion.com/v1 .
+.TP
+.B NOTION_VERSION
+Notion API version header, e.g.
+.IR 2022-06-28 .
+.TP
+.B DREAM_LOG_DIR
+Directory to look for a
+.I .env
+file in when the variables above are not already set. Defaults to
+.IR $HOME/dream-log .
+.SH FILES
+.TP
+.I $DREAM_LOG_DIR/.env
+Shell-sourced file defining
+.BR NOTION_TOKEN ", " DATABASE_ID ", " API_URL ", and " NOTION_VERSION .
+.SH EXIT STATUS
+.B 0
+on success,
+.B 1
+if required dependencies or configuration are missing, if a Notion API
+request fails, or if invalid arguments are given.
+.SH EXAMPLES
+List all dream entries:
+.RS
+.EX
+dream-log query
+.EE
+.RE
+Log a new dream:
+.RS
+.EX
+dream-log log 'Flying over mountains' 'I was soaring above snowy peaks at dusk.'
+.EE
+.RE
+Update an entry by id:
+.RS
+.EX
+dream-log update 36ec4fd1-da0d-813a-97c3-d550fce7d7e6 'Vivid colours.' Done
+.EE
+.RE
+Amend the most recent entry without looking up its id:
+.RS
+.EX
+dream-log amend 'Vivid colours, felt very real.' Done
+.EE
+.RE
+Look up an id by title, then delete it:
+.RS
+.EX
+dream-log del $(dream-log get-id 'Flying over mountains')
+.EE
+.RE
+.SH REQUIREMENTS
+.BR curl (1),
+.BR jq (1),
+and a Notion integration token for a database shared with that integration.
+.SH SEE ALSO
+Notion API documentation: https://developers.notion.com
+.SH AUTHOR
+duutabib
