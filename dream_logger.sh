@@ -7,11 +7,16 @@
 set -e
 
 #  Check and load environment variables from .env
-if [[ -f .env ]]; then
-    source .env
-else
-    echo "Error: .env file not found. Create it with NOTION_TOKEN and DATABASE_ID."
-    exit 1
+DREAM_LOG_DIR="${DREAM_LOG_DIR:-$HOME/dream-log}"
+
+if [[ -z "$NOTION_TOKEN" || -z "$DATABASE_ID" || -z "$API_URL" || -z "$NOTION_VERSION" ]]; then
+
+	if [[ -f "$DREAM_LOG_DIR/.env" ]]; then
+	    source "$DREAM_LOG_DIR/.env"
+	else
+	    echo "Error: .env file not found. Create it with NOTION_TOKEN and DATABASE_ID."
+	    exit 1
+	fi
 fi
 
 # Check for required dependencies
